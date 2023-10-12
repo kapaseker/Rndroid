@@ -3,7 +3,10 @@ package com.example.rndroid
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -16,15 +19,26 @@ class MainActivity : ComponentActivity() {
     init {
         System.loadLibrary("rust")
     }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         init()
         setContent {
-            RndroidTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            mainUI()
+        }
+    }
+
+    @Composable
+    @Preview
+    private fun mainUI() {
+        RndroidTheme {
+            // A surface container using the 'background' color from the theme
+            Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Column {
                     Greeting("Android")
-                    invokeViaJNI()
+                    Button(onClick = ::invokeViaJNI) {
+                        Text(text = "Hello")
+                    }
                 }
             }
         }
@@ -39,12 +53,4 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
         text = "Hello $name!", modifier = modifier
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    RndroidTheme {
-        Greeting("Android")
-    }
 }
