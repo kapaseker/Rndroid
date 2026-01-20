@@ -3,11 +3,12 @@ extern crate log;
 extern crate android_logger;
 
 use jni::JNIEnv;
-use jni::objects::{JClass, JObject, GlobalRef, JString};
-use jni::sys::{jclass, jint, jstring};
+use jni::objects::{GlobalRef, JByteArray, JClass, JIntArray, JObject, JString};
+use jni::sys::{jbyteArray, jint, jintArray, jstring};
 use log::debug;
 use log::LevelFilter;
 use std::sync::Mutex;
+use std::ptr;
 
 // Global callback reference storage
 static CALLBACK_REF: Mutex<Option<GlobalRef>> = Mutex::new(None);
@@ -166,5 +167,129 @@ pub extern "C" fn Java_com_example_rndroid_MainActivity_calculateWithCallback(
         }
     } else {
         debug!("Rust: No callback registered");
+    }
+}
+
+// Return a Java String back to Kotlin/Java
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "C" fn Java_com_example_rndroid_MainActivity_greet(
+    mut env: JNIEnv,
+    _class: JClass,
+    name: JString
+) -> jstring {
+    let name = match env.get_string(&name) {
+        Ok(s) => s.to_string_lossy().to_string(),
+        Err(e) => {
+            debug!("Rust: Failed to read name string: {:?}", e);
+            return ptr::null_mut();
+        }
+    };
+
+    let msg = format!("Hello from Rust, {}!", name);
+    match env.new_string(msg) {
+        Ok(s) => s.into_raw(),
+        Err(e) => {
+            debug!("Rust: Failed to create return string: {:?}", e);
+            ptr::null_mut()
+        }
+    }
+}
+
+// Accept a byte[] and return another byte[] (here we reverse it)
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "C" fn Java_com_example_rndroid_MainActivity_reverseBytes(
+    env: JNIEnv,
+    _class: JClass,
+    input: JByteArray
+) -> jbyteArray {
+    let mut bytes = match env.convert_byte_array(&input) {
+        Ok(v) => v,
+        Err(e) => {
+            debug!("Rust: Failed to convert byte array: {:?}", e);
+            return ptr::null_mut();
+        }
+    };
+
+    bytes.reverse();
+    match env.byte_array_from_slice(&bytes) {
+        Ok(arr) => arr.into_raw(),
+        Err(e) => {
+            debug!("Rust: Failed to create return byte array: {:?}", e);
+            ptr::null_mut()
+        }
+    }
+}
+
+// Sum an int[] and return the total
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "C" fn Java_com_example_rndroid_MainActivity_sumIntArray(
+    env: JNIEnv,
+    _class: JClass,
+    input: JIntArray
+) -> jint {
+    let len = match env.get_array_length(&input) {
+        Ok(n) => n,
+        Err(e) => {
+            debug!("Rust: Failed to get int array length: {:?}", e);
+            return 0;
+        }
+    };
+
+    let mut buf = vec![0i32; len as usize];
+    if let Err(e) = env.get_int_array_region(&input, 0, &mut buf) {
+        debug!("Rust: Failed to read int array: {:?}", e);
+        return 0;
+    }
+
+    buf.into_iter().sum()
+}
+
+// Create an int[] [0, 1, 2, ... n-1]
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "C" fn Java_com_example_rndroid_MainActivity_makeIntArray(
+    env: JNIEnv,
+    _class: JClass,
+    n: jint
+) -> jintArray {
+    let n = n.max(0) as usize;
+    let mut values = Vec::with_capacity(n);
+    for i in 0..n {
+        values.push(i as i32);
+    }
+
+    let arr = match env.new_int_array(n as i32) {
+        Ok(a) => a,
+        Err(e) => {
+            debug!("Rust: Failed to create int array: {:?}", e);
+            return ptr::null_mut();
+        }
+    };
+
+    if let Err(e) = env.set_int_array_region(&arr, 0, &values) {
+        debug!("Rust: Failed to fill int array: {:?}", e);
+        return ptr::null_mut();
+    }
+
+    arr.into_raw()
+}
+
+// Throw a Java exception from Rust
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "C" fn Java_com_example_rndroid_MainActivity_throwIfNegative(
+    mut env: JNIEnv,
+    _class: JClass,
+    v: jint
+) {
+    if v < 0 {
+        // After throwing, return to Java/Kotlin immediately.
+        let _ = env.throw_new(
+            "java/lang/IllegalArgumentException",
+            format!("v must be >= 0, got {}", v)
+        );
     }
 }

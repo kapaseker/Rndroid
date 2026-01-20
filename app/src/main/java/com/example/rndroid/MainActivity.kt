@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.rndroid.ui.theme.RndroidTheme
+import kotlin.math.min
 
 // Callback interface for Rust to call back to Android
 interface RustCallback {
@@ -47,6 +48,11 @@ class MainActivity : ComponentActivity() {
         var addResult by remember { mutableStateOf<String?>(null) }
         var multiplyResult by remember { mutableStateOf<String?>(null) }
         var callbackResult by remember { mutableStateOf<String?>(null) }
+        var greetResult by remember { mutableStateOf<String?>(null) }
+        var bytesResult by remember { mutableStateOf<String?>(null) }
+        var sumArrayResult by remember { mutableStateOf<String?>(null) }
+        var makeArrayResult by remember { mutableStateOf<String?>(null) }
+        var exceptionResult by remember { mutableStateOf<String?>(null) }
         
         // Create callback that updates Compose state
         // Note: This callback will be called from JNI thread, so we need to ensure UI updates happen on main thread
@@ -193,6 +199,164 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+
+                    // Return String section
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Return String (greet)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = {
+                                greetResult = greet("Android")
+                            }) {
+                                Text(text = "Call greet()")
+                            }
+                            if (greetResult != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = greetResult!!,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+
+                    // ByteArray section
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "ByteArray (reverseBytes)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = {
+                                val input = byteArrayOf(0x01, 0x02, 0x03, 0x04, 0x05)
+                                val out = reverseBytes(input)
+                                bytesResult = "in=${toHex(input)} out=${toHex(out)}"
+                            }) {
+                                Text(text = "Call reverseBytes()")
+                            }
+                            if (bytesResult != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = bytesResult!!,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+
+                    // IntArray section (sum + make)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "IntArray (sumIntArray / makeIntArray)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = {
+                                val arr = intArrayOf(1, 2, 3, 4, 5)
+                                val sum = sumIntArray(arr)
+                                sumArrayResult = "sum([1,2,3,4,5]) = $sum"
+                            }) {
+                                Text(text = "Call sumIntArray()")
+                            }
+                            if (sumArrayResult != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = sumArrayResult!!,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = {
+                                val n = 8
+                                val arr = makeIntArray(n)
+                                makeArrayResult = "makeIntArray($n) = ${arr.joinToString(prefix = \"[\", postfix = \"]\")}"
+                            }) {
+                                Text(text = "Call makeIntArray()")
+                            }
+                            if (makeArrayResult != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = makeArrayResult!!,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+
+                    // Exception section
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Exception (throwIfNegative)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = {
+                                exceptionResult = try {
+                                    throwIfNegative(-1)
+                                    "No exception"
+                                } catch (t: Throwable) {
+                                    "Caught: ${t::class.java.simpleName}: ${t.message}"
+                                }
+                            }) {
+                                Text(text = "Call throwIfNegative(-1)")
+                            }
+                            if (exceptionResult != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = exceptionResult!!,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            }
+                        }
+                    }
                     
                     // Original test button
                     Button(onClick = { invokeViaJNI("World") }) {
@@ -210,6 +374,22 @@ class MainActivity : ComponentActivity() {
     external fun registerCallback(callback: RustCallback)
     external fun unregisterCallback()
     external fun calculateWithCallback(a: Int, b: Int)
+    external fun greet(name: String): String
+    external fun reverseBytes(input: ByteArray): ByteArray
+    external fun sumIntArray(input: IntArray): Int
+    external fun makeIntArray(n: Int): IntArray
+    external fun throwIfNegative(v: Int)
+
+    private fun toHex(bytes: ByteArray): String {
+        val limit = min(bytes.size, 64)
+        return buildString {
+            for (i in 0 until limit) {
+                if (i > 0) append(' ')
+                append(bytes[i].toUByte().toString(16).padStart(2, '0'))
+            }
+            if (bytes.size > limit) append(" ...")
+        }
+    }
 }
 
 @Composable
